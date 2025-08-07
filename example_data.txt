@@ -1,0 +1,31 @@
+Example training data, trained models, and test data can be downloaded from here:
+https://hpc.nih.gov/~NIMH_MHSNIR/denoising_example_data.zip
+
+example_data
+            |2D_training
+                        |atlas                        
+            |3D_training
+                        |atlas
+            |test_data
+            
+            
+1. 2D and 3D training folders contain atlas folders. These folders contain 
+2D/3D atlas image pairs in the format, atlasX_M1.tif and atlasX_GT.tif, X=1,2,3..
+There are two models at epoch 1 and 50.
+
+2. The naming convention should strictly be followed. M1 (modality 1) images are
+noisy images, and GT images are noise free (ground truth). The noise free images
+are usually obtained by averaging hundreds of repeats of the noisy images. 
+
+3. For 2D training, a time-series acquisition can be obtained for a slice. Then the 
+time series can be averaged to get a 2D GT image. 
+
+4. For 3D training, the time series should be obtained per slice without moving the
+microscope to avoid small microscope movement error.
+
+5. To create an average, 16bit images must be converted to 32bit before averaging.
+This can be done in Fiji->Image->Type->32bit
+
+6. The test_data folder contains a 3D image, its denoised version using 2D and 3D
+models.
+
