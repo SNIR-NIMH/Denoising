@@ -10,4 +10,33 @@ very large multi-Terabyte 3D images (e.g. 100k x 100k pixels with thousands of s
 using multiple GPUs on multiple nodes. A simple GUI is also provided to train/predict
 small images.
 
+
+
 ## Overview
+The following figure shows an example of a 3D noisy and denoised image. It has
+been denoised using a 3D UNET using 64x64x16 patch size.
+
+Noisy Image             |  Denoised Image
+:-------------------------:|:-------------------------:
+![](figs/ch00-1.gif)  |  ![](figs/ch00_denoised3D-1.gif)
+
+## Installation 
+
+1. Libtiff is required to be installed. If root access is available, install
+   libtiff-devel (```sudo yum install libtiff-devel```). If root access is
+   not available, download from ```https://download.osgeo.org/libtiff/```. The
+scripts are tested with libtiff 4.6.0 with GCC-11.3.0. If libtiff-devel is not
+installed in the system,  please download tiff-4.6.0.zip, unzip, compile, and
+After installing to a suitable location, add the lib folder to LD_LIBRARY_PATH and
+the include folder to CPATH
+
+
+```
+conda create -n myowncondaenv python==3.10
+conda activate myowncondaenv
+pip install tensorflow-gpu==2.11.0
+pip install cython==0.29.36
+pip install pytiff
+pip install scikit-image==0.19.3
+```
+
