@@ -24,13 +24,16 @@ Noisy Image             |  Denoised Image
 
 1. Libtiff is required to be installed. If root access is available, install
    libtiff-devel (```sudo yum install libtiff-devel```). If root access is
-   not available, download from ```https://download.osgeo.org/libtiff/```. The
-scripts are tested with libtiff 4.6.0 with GCC-11.3.0. If libtiff-devel is not
-installed in the system,  please download tiff-4.6.0.zip, unzip, compile, and
+   not available, download the source from ```https://download.osgeo.org/libtiff/```. The
+scripts are tested with libtiff 4.6.0 with GCC-11.3.0. Download tiff-4.6.0.zip, unzip, compile, and
 After installing to a suitable location, add the lib folder to LD_LIBRARY_PATH and
-the include folder to CPATH
+the include folder to CPATH, e.g.,
+```
+export LD_LIBRARY_PATH=/home/user/libtiff/4.6.0/install/lib:${LD_LIBRARY_PATH}
+export CPATH=/home/user/libtiff/4.6.0/install/include:${CPATH}
+```
 
-
+2. Create new python environment with tensorflow-gpu,
 ```
 conda create -n myowncondaenv python==3.10
 conda activate myowncondaenv
@@ -39,4 +42,7 @@ pip install cython==0.29.36
 pip install pytiff
 pip install scikit-image==0.19.3
 ```
+Then ```python Denoise_Train.py -h``` should show the help.
 
+## Usage
+### Training
