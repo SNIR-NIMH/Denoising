@@ -23,42 +23,36 @@ if os.path.isfile(code) ==False:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Model Prediction  with multiple GPUs')
 
-    parser.add_argument('--model', required=True, dest='MODEL', type=str,
-                        help='Trained models (.h5) files. Multiple models are accepted')
+
     parser.add_argument('--im', required=True, dest='IMAGES', type=str,
-                        help='Input images, nifti (.nii or .nii.gz) or TIF (.tif or .tiff). The order must'
-                             'be same as the order of atlasXX_M1.nii.gz, atlasXX_M2.nii.gz images, i.e. 1st'
-                             'input must be of channel M1, second M2, etc. For microscopy images (--modalities mic),'
-                             'a single tif image directory containing multiple 2D tif image slices is also acceptable. ')
+                        help='Input image, saved as a single directory containing multiple 2D tif image slices. ')
 
     parser.add_argument('--o', required=True, action='store', dest='OUTPUT',
-                        help='Output filename, e.g. somefile.nii.gz or somefile.tif where the result will be written. '
-                             'If the image is large (e.g. stitched images), use a folder as output, e.g. /home/user/output_folder/ '
-                             'where 2D slices will be written. Output can be NIFTI only if the input is also NIFTI.')
+                        help='Output folder, e.g. /home/user/output_folder/ '
+                             'where 2D slices will be written.')
+    parser.add_argument('--model', required=True, dest='MODEL', type=str,
+                        help='Trained models (.h5) files. ')
     parser.add_argument('--psize', required=True, type=int, nargs='+', dest='PATCHSIZE',
-                        help='2D/3D patch size used for training, e.g. 16 16 16, separated by space. '
-                             'If the training model was U-net, the patch size must be multiple of 16, otherwise '
-                             'there will be size mismatch error. Patch size must be even.')
+                        help='Same 2D or 3D patch size used for training.')
     parser.add_argument('--n', required=True, type=int, dest='NUMGPU', default=0,
-                        help='Number of parallel GPUs to use. **** Note: 1) This only works for 2D models, and 2) '
-                             'when both the input and output are directories, and input directory contains 2D tif slices.')
+                        help='Number of parallel GPUs to use. **** Note: This only works for 2D models.')
     parser.add_argument('--network', required=True, dest='NETWORK', type=str,
                         help='Type of network used for training. Options are Unet, DenseNet, Inception, RCAN, UNET++, EDSR, AttentionUnet')
     # Optional inputs
 
     parser.add_argument('--gpu', required=False, action='store', dest='GPU', type=int, default=0,
-                        help='GPU id to use. Default is 0.')
+                        help='GPU id to use on each node. Default is 0.')
     parser.add_argument('--chunks', required=False, dest='CHUNKS', type=int, nargs='+', default=[1,1],
                         help='If the input image size is too large (such as stitched images) to fit into GPU memory, '
                              'it can be chunked using "--chunks nh nw" argument. E.g. --chunks 3 2 will split a '
                              'HxWxD image into overlapping (H/3)x(W/2)xD chunks, apply the trained models on '
                              'each chunk serially, then join the chunks. This option works only if (1) the input and '
-                             'outout images are both TIF (either 3D or a folder), (2) only one channel is available, '
-                             '(3) only one model is specified.')
+                             'outout images are both TIF (either 3D or a folder), (2) only one channel is available. ')
+
     parser.add_argument('--float', required=False, dest='FLOAT', action='store_true',
                         help='Use this option to save output images as FLOAT32. Default is UINT16. This is useful '
                              'if the dynamic range of the training data is small. Note, saving as FLOAT32 images will '
-                             'approximately double the size of the image.')
+                             'double the size of the output image.')
 
     results = parser.parse_args()
 

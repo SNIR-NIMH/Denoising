@@ -526,22 +526,17 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Image Denoising Training.', formatter_class=argparse.RawDescriptionHelpFormatter)
     required = parser.add_argument_group('Required arguments')
     required.add_argument('--atlasdir', required=True, action='store', dest='ATLASDIR', type=str,
-                        help='Atlas directory containing atlasXX_M1.nii.gz, atlasXX_M2.nii.gz, atlasXX_GT.nii.gz, XX=1,2,3.. etc. '
+                        help='Atlas directory should contain atlas{X}_M1.tif, atlas{X}_M2.tif, atlas{X}_GT.tif, X=1,2,3.. etc. '
                             'The M1, M2 etc denote 1st, 2nd modalities and GT denotes ground truth. See --modalities. '
-                            'The atlases should be devoid of any background noise, because by default all patches with non-zero '
-                            'center voxels will be considered for training. If the atlases have background noise, '
-                            'then the noise patches may be included in training. Therefore use the '
-                            'remove_background_noise.sh script to remove background noise from one of the T1-w images. '
-                            'The brainmask can easily be obtained using ROBEX. Alternately, if atlasXX_mask.nii.gz '
-                            'binary images are present, then patches will be collected from the non-zero indices of '
-                             'the atlasXX_mask.nii.gz images.')
+                            'All patches with non-zero center voxels will be considered for training. Optionally, '
+                            'if atlas{X}_mask.tif binary images are present, then patches will be collected from the '
+                             'non-zero indices of the atlas{X}_mask.tif images.')
+
     required.add_argument('--natlas',required=True, action='store', type=int, dest='NUMATLAS',
-                        help='Number of atlases to be used. Atlas directory must contain at least '
-                             'these many atlases. Training will be done separately on each atlas, '
-                             'rather than combining the patches from different atlases to '
-                             'avoid intensity scaling between them.')
+                        help='Number of atlases to be used. Atlas directory must contain at least these many atlases.')
+
     required.add_argument('--psize',required=True, type=int, nargs='+', dest='PATCHSIZE',
-                        help='2D/3D patch size, e.g. --psize 32 32 32. \n**** Patch sizes must be multiple of 16.****')
+                        help='2D or 3D patch size, e.g. --psize 256 256 or --psize 32 32 32. **** Patch sizes must be multiple of 16.****')
 
     required.add_argument('--model', required=True, type=str, dest='MODEL',
                         help='Training model, options are Unet, DenseNet, Inception, RCAN, UNET++, EDSR, AttentionUnet')
@@ -551,27 +546,27 @@ if __name__ == "__main__":
     optional = parser.add_argument_group('Optional arguments')
 
     optional.add_argument('--modalities', required=False, action='store', dest='MODAL', default=None,
-                          help='A string of input and target image modalities. Accepted modalities are T1/T2/PD/FL/CT/UNK/MIC. '                               
-                               'Default unk,unk,..., i.e. no normalization')
+                          help='A string of input and target image modalities. Accepted modalities are T1/T2/PD/FL/CT/UNK. '                               
+                               'Default unk,unk,..., i.e. no normalization. Normally microscopy images don''t need normalization.')
     optional.add_argument('--gpu', required=False, action='store', dest='GPU', type=str, default='0',
                         help='GPU id or ids to use for training. Example --gpu 1 indicates gpu with id 1 will be used '
                              'for training. For multi-gpu training, use comma separated list, such as --gpu 2,3,4.')
     optional.add_argument('--maxpatch', required=False, default=50000, type=int, dest='MAXPATCH', action='store',
-                        help='Maximum number of patches to be collected from each atlas. Default is 50,000.')
+                        help='Maximum number of patches to be collected from each atlas. Default is 50,000. '
+                             'Generally 100,000 patches are good enough. As a thumb rule, use 100000/natlas.')
     optional.add_argument('--basefilters', required=False, dest='BASEFILTER', default=16, type=int, action='store',
                         help='Base number of convolution filters to be used. Usually 8-32 works well. '
-                             'Maximum number of filters in last conv block in Unet is 16 x BASEFILTERS. ')
+                             'For UNET, maximum number of filters in last conv block in Unet is 16 x BASEFILTERS. ')
     optional.add_argument('--batchsize', required=False, default=64, type=int, dest='BATCHSIZE', action='store',
-                        help='Batch size. Default 64. Usually 50-150 works well.')
+                        help='Batch size. Default 64. Usually 32-96 works well. Decrease for 3D patches or large 2D patches.')
     optional.add_argument('--epoch', required=False, default=50, type=int, dest='EPOCH', action='store',
-                        help='Maximum number of epochs to run. Default is 20. Usually 20-50 works well.')
+                        help='Maximum number of epochs to run. Default is 20. Usually 50-100 works well.')
     optional.add_argument('--loss', required=False, default='mae', type=str, dest='LOSS', action='store',
-                        help='Loss type. For segmentation/labeling, use BCE (binary cross-entropy). For denoising, use '
-                             'MSE or MAE. Default MAE.')
+                        help='Loss type. either MSE or MAE. Default MAE.')
     optional.add_argument('--initmodel', required=False, dest='INITMODEL', default='None',
-                        help='Pre-trained model to initilize, if available.')
+                        help='Pre-trained model to initialize, if available.')
     optional.add_argument('--lr', required=False, dest='LR', default=0.0001, type=float,
-                        help='Learning rate. Default is 0.0001.')
+                        help='Learning rate for Adam optimizer. Default is 0.0001.')
 
     if len(sys.argv) < 2:
         parser.print_usage()

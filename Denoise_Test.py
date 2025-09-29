@@ -154,39 +154,36 @@ def ApplyModel2D(vol, model, progressbar=True):
     return outvol
 
 
-parser = argparse.ArgumentParser(description='Model Prediction')
+parser = argparse.ArgumentParser(description='Model prediction on single GPU')
 
 # Required inputs
 parser.add_argument('--im','-i', required=True, dest='IMAGES', nargs='+', type=str,
-                    help='Input images, nifti (.nii or .nii.gz) or TIF (.tif or .tiff). The order must'
-                         'be same as the order of atlasXX_M1.nii.gz, atlasXX_M2.nii.gz images, i.e. 1st'
-                         'input must be of channel M1, second M2, etc. For microscopy images (--modalities mic),'
-                         'a single tif image directory containing multiple 2D tif image slices is also acceptable. ')
+                    help='Input image(s), nifti (.nii or .nii.gz) or TIF (.tif or .tiff). The order must '
+                         'be same as the order of atlas{X}_M1.nii.gz, atlas{X}_M2.nii.gz images, i.e. 1st'
+                         'input must be of channel M1, second M2, etc. For microscopy images,'
+                         'a single directory containing multiple 2D tif image slices is acceptable. ')
 
 parser.add_argument('--o','-o', required=True, action='store', dest='OUTPUT',
                     help='Output filename, e.g. somefile.nii.gz or somefile.tif where the result will be written. '
-                         'If the image is large (e.g. stitched images), use a folder as output, e.g. /home/user/output_folder/ '
+                         'If the image is large, use a folder as output, e.g. /home/user/output_folder/ '
                          'where 2D slices will be written. Output can be NIFTI only if the input is also NIFTI.')
 parser.add_argument('--model', required=True,  dest='MODEL', type=str,
-                    help='Trained model (.h5) files. Only a single model is accepted')
+                    help='Trained model (.h5) files.')
 parser.add_argument('--network', required=True, dest='NETWORK', type=str,
-                    help = 'Type of network used for training. Options are Unet, DenseNet, Inception, RCAN, UNET++, EDSR, AttentionUnet')
+                    help = 'Type of the network used for training. Options are Unet, DenseNet, Inception, RCAN, UNET++, EDSR, AttentionUnet')
 
 parser.add_argument('--psize', required=True, type=int, nargs='+', dest='PATCHSIZE',
-                    help='2D/3D patch size used for training, e.g. 16 16 16, separated by space. '
-                         'If the training model was U-net, the patch size must be multiple of 16, otherwise '
-                         'there will be size mismatch error. Patch size must be even.')
+                    help='Same 2D or 3D patch size used for training.')
 # Optional inputs
 parser.add_argument('--modalities', required=False, action='store', dest='MODAL', default=None,
                     help='(Optional) A comma separated string of input image modalities. '
-                         'Accepted modalities are T1/T2/PD/FL/CT/MIC/UNK. Example is t1,t2. This is the same '
-                         'as entered during training (without the output modality). This is needed for proper '
-                         'normalization of images. Default: If you don''t want images to be normalized (same for training), '
+                         'Accepted modalities are T1/T2/PD/FL/CT/MIC/UNK. Default is unk,unk. This is the same '
+                         'as entered during training. Default: If images are not needed to be normalized (same for training), '
                          'then use UNK (unknown) as modality.')
 parser.add_argument('--gpu', required=False, action='store', dest='GPU', type=int, default=0,
                     help='(Optional) GPU id to use. Default is 0.')
 parser.add_argument('--chunks', required = False, dest='CHUNKS', type=int, nargs='+', default=[0,0],
-                    help='(Optional) If the input image size is too large (such as stitched images) to fit into GPU memory, '
+                    help='(Optional) If the input image size is too large to fit into GPU memory, '
                          'it can be chunked using "--chunks nh nw" argument. E.g. --chunks 3 2 will split a '
                          'HxWxD image into overlapping (H/3)x(W/2)xD chunks, apply the trained models on '
                          'each chunk serially, then join the chunks. This option works only if (1) the input and '
@@ -196,7 +193,7 @@ parser.add_argument('--chunks', required = False, dest='CHUNKS', type=int, nargs
 parser.add_argument('--float', required = False, dest='FLOAT', action='store_true',
                     help='(Optional) Use --float to save output images as FLOAT32. Default is UINT16. This is useful '
                          'if the dynamic range of the training data is small. Note, saving as FLOAT32 images will '
-                         'approximately double the size of the image.')
+                         'double the size of the output image.')
 parser.add_argument('--compress', required=False, dest='COMPRESS', action='store_true',
                     help='(Optional) If --compress is used, the output Tif images will be compressed. ')
 
@@ -728,7 +725,8 @@ else:
                 if results.FLOAT == False:
                     outvol[outvol > 65535] = 65535
                     outvol = np.asarray(outvol, dtype=np.uint16)
-                if 2 * np.prod(outvol.shape) >= 4 * (1024 ** 3):
+                a = outvol.nbytes / (1024 ** 3)
+                if a >= 4 :
                     io.imsave(outputfilenames[k], outvol, check_contrast=False, bigtiff=True, compression=results.COMPRESS)
                 else:
                     io.imsave(outputfilenames[k], outvol, check_contrast=False, bigtiff=False, compression=results.COMPRESS)
@@ -798,15 +796,18 @@ if numsplit == 0:  # outvol is saved in memory
         outvol = np.asarray(outvol, dtype=np.uint16)
     if output_is_file==True:
         _, ext = os.path.splitext(os.path.basename(outname))
-        print("Writing " + outname)
+
         if ext == '.nii' or ext == '.gz':
             obj = nifti.load(results.IMAGES[0])
+            print("Writing " + outname)
             write_image(outvol, outname, niftiobj=obj)
         else:
-
-            if 2*np.prod(outvol.shape)>= 4*(1024**3):
+            nb = outvol.nbytes / (np.prod(outvol.shape))  # 4 bytes for float32
+            if nb*np.prod(outvol.shape)>= 4*(1024**3):
+                print('Writing a BigTIFF image {}'.format(outname))
                 write_image(outvol, outname, compression=results.COMPRESS, bigtifflag=True)
             else:
+                print('Writing {}'.format(outname))
                 write_image(outvol, outname, compression=results.COMPRESS, bigtifflag=False)
 
     else:
@@ -821,9 +822,13 @@ if numsplit == 0:  # outvol is saved in memory
             else:
                 s = os.path.basename(files[i])
                 outputfilenames[i] = os.path.join(outname, s)
-        print("Writing in " + outname)
+        print("Writing 2D tifs in " + outname)
+        a = outvol[:,:,0].nbytes/(1024**3)
         for k in tqdm(range(0, origdim[2])):
-            io.imsave(outputfilenames[k], outvol[:, :, k], check_contrast=False, bigtiff=False, compression=results.COMPRESS)
+            if a>=4.0:
+                io.imsave(outputfilenames[k], outvol[:, :, k], check_contrast=False, bigtiff=True, compression=results.COMPRESS)
+            else:
+                io.imsave(outputfilenames[k], outvol[:, :, k], check_contrast=False, bigtiff=False, compression=results.COMPRESS)
 else:
     if output_is_file == True:
         for k in range(0, origdim[2]):
@@ -844,10 +849,12 @@ else:
             obj = nifti.load(results.IMAGES[0])
             write_image(outvol, outname, niftiobj=obj)
         else:
-
-            if 2 * np.prod(outvol.shape) >= 4 * (1024 ** 3):
+            nb = outvol.nbytes / (np.prod(outvol.shape))  # 4 bytes for float32
+            if nb * np.prod(outvol.shape) >= 4 * (1024 ** 3):
+                print('Writing a BigTIFF image {}'.format(outname))
                 write_image(outvol, outname, compression=results.COMPRESS, bigtifflag=True)
             else:
+                print('Writing {}'.format(outname))
                 write_image(outvol, outname, compression=results.COMPRESS, bigtifflag=False)
 t2 = time.process_time()
 print('Total time taken = {}'.format(datetime.timedelta(seconds=(t2 - t1))))
