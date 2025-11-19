@@ -58,18 +58,19 @@ def submit():
     bf = basefilters.get()
     bs = batchsize.get()
     e = epoch.get()
+    g = gpuid.get()
     path = os.path.dirname(sys.argv[0])
     path = os.path.abspath(path)
-    path = os.path.join(path, 'Denoise_Train.py ')
+    path = os.path.join(path, 'Synthesis_Train.py ')
     # Use --atlasdir="path" --> The double quote and equal-to ensures the space in the path is respected
     # Using --atlasdir path or --atlasdir "path" does not work if there are spaces in  path, only arg equalto quote path unquote works
     if p3==1:
         cmd = 'python ' + path + ' --atlasdir="' + atlasdir + '" --natlas ' + str(n) + ' --psize ' + str(p1) + ' ' + str(p2) +  \
-          ' --modalities unk,unk --model unet --o="' + atlasdir + '" --gpu 0 ' + ' --maxpatch ' + str(mx) + ' --basefilters ' + str(bf) + \
+          ' --modalities unk,unk --model unet --o="' + atlasdir + '" --gpu ' + g + ' --maxpatch ' + str(mx) + ' --basefilters ' + str(bf) + \
              ' --batchsize ' + str(bs) + ' --epoch ' + str(e) + ' --loss mae '
     else:
         cmd = 'python ' + path + ' --atlasdir="' + atlasdir + '" --natlas ' + str(n) + ' --psize ' + str(p1) + ' ' + str(p2) + ' ' + str(p3) + \
-              ' --modalities unk,unk --model unet --o "' + atlasdir + '" --gpu 0 ' + ' --maxpatch ' + str(mx) + ' --basefilters ' + str(bf) + \
+              ' --modalities unk,unk --model unet --o "' + atlasdir + '" --gpu ' + g + ' --maxpatch ' + str(mx) + ' --basefilters ' + str(bf) + \
               ' --batchsize ' + str(bs) + ' --epoch ' + str(e) + ' --loss mae '
 
     print(cmd)
@@ -93,6 +94,7 @@ if __name__ == "__main__":
     basefilters = tk.IntVar()
     batchsize  = tk.IntVar()
     epoch = tk.IntVar()
+    gpuid = tk.StringVar()
 
     # One frame for atlas folder because it has 3 columns
     frame1 = LabelFrame(root)
@@ -115,6 +117,7 @@ if __name__ == "__main__":
     basefilters_label = tk.Label(frame2, text='Number of base filters')
     batchsize_label = tk.Label(frame2, text='Batch size')
     epoch_label = tk.Label(frame2, text='Number of training epochs')
+    gpu_label = tk.Label(frame2, text='GPU IDs to use (comma separated string, starting from 0)')
 
     natlas_entry = tk.Entry(frame2, textvariable=natlas, width=5)
     psize1_entry = tk.Entry(frame2, textvariable=psize1, width=5)
@@ -124,6 +127,7 @@ if __name__ == "__main__":
     basefilters_entry = tk.Entry(frame2, textvariable=basefilters,  width=5)
     batchsize_entry = tk.Entry(frame2, textvariable=batchsize,  width=5)
     epoch_entry = tk.Entry(frame2, textvariable=epoch,  width=5)
+    gpu_entry = tk.Entry(frame2, textvariable=gpuid, width=10)
     psize1.set(128)
     psize2.set(128)
     psize3.set(1)
@@ -131,6 +135,7 @@ if __name__ == "__main__":
     basefilters.set(32)
     batchsize.set(32)
     epoch.set(50)
+    gpuid.set(0)
 
     #c = ttk.Button(root, text="find", command=doStuff)
     #c.grid(row=1, column=4)
@@ -143,6 +148,7 @@ if __name__ == "__main__":
     basefilters_label.grid(row=5, column=1, padx=60)
     batchsize_label.grid(row=6, column=1, padx=60)
     epoch_label.grid(row=7, column=1, padx=60)
+    gpu_label.grid(row=8, column=1, padx=60)
 
     natlas_entry.grid(row=2, column=3, padx=1)
     psize1_entry.grid(row=3, column=2, padx=1)
@@ -152,6 +158,7 @@ if __name__ == "__main__":
     basefilters_entry.grid(row=5, column=3, padx=1)
     batchsize_entry.grid(row=6, column=3, padx=1)
     epoch_entry.grid(row=7, column=3, padx=1)
+    gpu_entry.grid(row=8, column=3, padx=1)
 
     frame2.grid(row=1, column=0, sticky='ew')
 
