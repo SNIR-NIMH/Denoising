@@ -1,5 +1,36 @@
 <h1 align="center">Terabyte scale image denoising using multiple nodes & multiple GPUs</h1>
 
+<!-- TABLE OF CONTENTS -->
+<details>
+  <summary>Table of Contents</summary>
+  <ol>
+    <li>
+      <a href="#about-the-project">About The Project</a>      
+    </li>
+   <li>
+      <a href="#overview">Overview</a>      
+    </li>
+   <li>
+      <a href="#installation">Installation</a>      
+    </li>
+    <li>
+      <a href="#training">Training</a>      
+    </li>
+    <li>
+      <a href="#prediction">Prediction</a>  
+      <ul>
+        <li><a href="#multi-gpu-multi-node-prediction">Multi-GPU multi-node prediction</a></li>
+        <li><a href="#prediction-with-2d-patches">Prediction with 2D patches</a></li>
+         <li><a href="#prediction-with-3d-patches">Prediction with 3D patches</a></li>
+      </ul>
+    </li>
+    
+    
+  </ol>
+</details>
+
+
+
 <!-- ABOUT THE PROJECT -->
 ## About The Project
 
@@ -47,8 +78,7 @@ pip install scikit-image==0.19.3
 Then ```python Denoise_Train.py -h``` should show the help.
 
 
-## Usage
-### Training
+## Training
 Multi-GPU single node training can be done with 2D or 3D patches depending on the application,
 ```
 python Denoise_Train.py -h
@@ -107,10 +137,9 @@ Training GT, i.e. ground truth noise-free images are usually obtained by acquiri
 ROI 200 or more times and averaging them as 32-bit images. Then atlas{X}_M1 can be any one
 of the noisy image.
 
-### Prediction
+## Prediction
 The trained model can be applied to any size image, either a 3D tif or a folder containing 
-multiple 2D tifs. For multi-GPU multi-node prediction, only 2D model is applicable for the 
-time being. For a 3D model, only single-GPU prediction is available now.
+multiple 2D tifs. 
 
 ```
 python Denoise_Test.py -h
@@ -163,16 +192,19 @@ python Denoise_Test.py --im /home/user/folder_with_large_2Dtifs/  --model mymode
 
 ### Multi-GPU multi-node prediction
 
-Very large multi-Terabyte images can be denoised using multiple GPUs and multiple nodes using Denoise_Test_multigpu.py.
+Very large multi-Terabyte images can be denoised using multiple GPUs and multiple nodes using Denoise_Test2D_multigpu.py
+or Denoise_Test3D_multigpu.py, for 2D or 3D patches, respectively.
 For this script, 
-* the input image must be saved as 2D tifs in a folder,
+* the input image must be saved as 2D tifs in a folder (3D tifs are not acceptable)
 * output must be a folder,
-* training must be done with 2D patches.
+* only single channel images are accepted,
+  
+### Prediction with 2D patches
 
 Usage:
 ```
-python Denoise_Test_multigpu.py -h
-usage: Denoise_Test_multigpu.py [-h] --im IMAGES --o OUTPUT --model MODEL --psize PATCHSIZE [PATCHSIZE ...] --n NUMGPU --network NETWORK [--gpu GPU]
+python Denoise_Test2D_multigpu.py -h
+usage: Denoise_Test2D_multigpu.py [-h] --im IMAGES --o OUTPUT --model MODEL --psize PATCHSIZE [PATCHSIZE ...] --n NUMGPU --network NETWORK [--gpu GPU]
                                 [--chunks CHUNKS [CHUNKS ...]] [--float]
 
 Model Prediction with multiple GPUs
@@ -205,8 +237,21 @@ This script will split the input image into N (#GPUs) folders and create a swarm
 calling Denoise_Test.py to process each folder independently. The swarm file can be swarmed in a cluster.
 
 For a multi-GPU single node system, simply run the script with ```--n N, where N=number of available GPUs```, 
-and edit the output swarm file from ```--gpu 0``` to ```--gpu 1```, ```--gpu 2``` etc. Then use GNU Parallel
+and then edit the output swarm file from ```--gpu 0``` to ```--gpu 1```, ```--gpu 2``` etc. Then use GNU Parallel
 or PPSS to run all of the N lines together.
 
+### Prediction with 3D patches
 
+Prediction with 3D patches is a 2-step processes. First, for each of the N slices in a folder, N subfolders are
+created, where i-th subfolder contains symbolic links of P slices around the i-th slice, P being the patch size in Z.
+Then a 3D prediction on each of those N subfolders are obtained in parallel or in cluster.
 
+Step1: Create appropriate symlinks:
+```
+python  Denoise_Test3D_multigpu.py --func prepare -i /home/user/input_folder/  -o /home/user/output_folder/ 
+                            --psize 64 64 64  --model /home/user/my3Dmodel.h5 --n 52 --network unet --gpu 0 --chunks 9 12 
+```
+It will create N folders (N=number of slices) with appropriate symlinks and also create a swarm file. 
+
+Step2: The swarm file contains the same command except --func run and inputs as those N folders. For a cluster, swarm the 
+file. For single-node multi-GPU system, simply change the GPU ids from default 0 to the number of GPUs and parallelize
