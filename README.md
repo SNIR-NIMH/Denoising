@@ -242,16 +242,17 @@ or PPSS to run all of the N lines together.
 
 ### Prediction with 3D patches
 
-Prediction with 3D patches is a 2-step processes. First, for each of the N slices in a folder, N subfolders are
-created, where i-th subfolder contains symbolic links of P slices around the i-th slice, P being the patch size in Z.
+Prediction with 3D patches is a 2-step processes. First, for each of the input N slices, N subfolders are
+created, where the i-th subfolder contains symbolic links of P slices around the i-th slice, P being the patch size in Z.
 Then a 3D prediction on each of those N subfolders are obtained in parallel or in cluster.
 
 Step1: Create appropriate symlinks:
 ```
-python  Denoise_Test3D_multigpu.py --func prepare -i /home/user/input_folder/  -o /home/user/output_folder/ 
-                            --psize 64 64 64  --model /home/user/my3Dmodel.h5 --n 52 --network unet --gpu 0 --chunks 9 12 
+python  Denoise_Test3D_multigpu.py --func prepare -i /home/user/input_folder/  -o /home/user/output_folder/
+       --psize 64 64 64  --model /home/user/mymodel_64x64x64_UNET.h5 --n 52 --network unet --gpu 0 --chunks 9 12 
 ```
 It will create N folders (N=number of slices) with appropriate symlinks and also create a swarm file. 
 
-Step2: The swarm file contains the same command except --func run and inputs as those N folders. For a cluster, swarm the 
-file. For single-node multi-GPU system, simply change the GPU ids from default 0 to the number of GPUs and parallelize
+Step2: The swarm file contains the same command except ```--func run``` and inputs as those newly created N subfolders.
+For a cluster, swarm the file as provided by the output of the prepare command. For single-node multi-GPU system, simply 
+change the GPU ids from default 0 to the number of GPUs and parallelize using ppss or GNU-parallel.
